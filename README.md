@@ -34,12 +34,12 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | bash -s -- -y
  
 ## Compiling
 ```
-`cd rust-cli-audioplayer
+cd rust-cli-audioplayer
 cargo build --release
 ```
 
 ## Running
 ```
-`cd rust-cli-audioplayer
+cd rust-cli-audioplayer
 ./target/release/cli-audioplayer-rs Your-Song.mp3
 ```
