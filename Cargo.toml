@@ -1,0 +1,9 @@
+[package]
+name = "rust-cli-audioplayer"
+version = "0.4.0"
+edition = "2024"
+
+[dependencies]
+iced = "0.4"
+rodio = "0.14.0"
+minimp3 = "0.5.1"
