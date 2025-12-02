@@ -149,6 +149,14 @@ fn main() {
     }
 }
 
+fn format_time(sec: f32) -> String {
+    let total = sec.max(0.0) as u64;
+    let h = total / 3600;
+    let m = (total % 3600) / 60;
+    let s = total % 60;
+    format!("{:02}:{:02}:{:02}", h, m, s)
+}
+
 /// progressbar
 fn print_progress(elapsed: f32, total: f32) {
     let width = 30;
@@ -163,7 +171,10 @@ fn print_progress(elapsed: f32, total: f32) {
         "-".repeat(empty)
     );
 
-    print!("\r{} {:.1}s / {:.1}s", bar, elapsed, total);
+    let t_elapsed = format_time(elapsed);
+    let t_total   = format_time(total);
+
+    print!("\r{} {} / {}", bar, t_elapsed, t_total);
     std::io::Write::flush(&mut std::io::stdout()).unwrap();
 }
 
