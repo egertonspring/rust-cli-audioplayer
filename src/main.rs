@@ -13,13 +13,13 @@ struct PlaybackState {
     paused: bool,
     stopped: bool,
     start_time: Option<Instant>,
-    paused_offset: f32, // Sekunden
+    paused_offset: f32, // seconds
 }
 
 fn main() {
     let file_path = std::env::args()
         .nth(1)
-        .unwrap_or("sample.mp3".to_string());
+        .unwrap_or("Your-Song.mp3".to_string());
 
     println!("loading file: {}", file_path);
 
@@ -38,8 +38,8 @@ fn main() {
     let (_stream, handle) = match OutputStream::try_default() {
         Ok((s, h)) => (s, h),
         Err(e) => {
-            eprintln!("Kein Standard-Audioausgabegerät gefunden: {e}");
-            eprintln!("Stelle sicher, dass PipeWire/ALSA läuft oder ein Device verbunden ist.");
+            eprintln!("Did not find default audio output device: {e}");
+            eprintln!("Please make sure that PipeWire/ALSA is running and a device is connected to 3.5mm output, bluetooth, HDMI, GPIO or whatever your audio device connects to.");
             return;
         }
     };
@@ -93,12 +93,7 @@ fn main() {
     }
 
     // user controls
-    println!("\ncontrols:");
-    println!("\tp = play");
-    println!("\ta = pause");
-    println!("\ts = stop");
-    println!("\tq = quit\n");
-
+    println!("controls: p = play | a = pause | s = stop | q = quit");
     loop {
         let mut input = String::new();
         stdin().read_line(&mut input).unwrap();
@@ -120,7 +115,7 @@ fn main() {
                 p.playing = true;
                 p.paused = false;
                 p.stopped = false;
-
+                println!("{}", file_path);
                 println!("▶ play");
             }
             "a" => {
