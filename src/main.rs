@@ -1,8 +1,9 @@
+use crossterm::event::{self, Event, KeyCode};
+use crossterm::terminal::{enable_raw_mode, disable_raw_mode};
 use rodio::{OutputStream, Sink, Source};
 use minimp3::{Decoder as Mp3Decoder, Frame};
 use std::{
     fs::File,
-    io::{stdin},
     sync::{Arc},
     thread,
     time::{Duration, Instant},
@@ -16,7 +17,7 @@ struct PlaybackState {
     paused_offset: f32, // seconds
 }
 
-fn main() {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let file_path = std::env::args()
         .nth(1)
         .unwrap_or("Your-Song.mp3".to_string());
@@ -33,6 +34,7 @@ fn main() {
         "mp3 loaded {} Hz, {} channels, {:.2} seconds",
         sample_rate, channels, total_duration
     );
+    enable_raw_mode()?;
 
     // Versuch: Default Output-Device nutzen
     let (_stream, handle) = match OutputStream::try_default() {
@@ -40,7 +42,7 @@ fn main() {
         Err(e) => {
             eprintln!("Did not find default audio output device: {e}");
             eprintln!("Please make sure that PipeWire/ALSA is running and a device is connected to 3.5mm output, bluetooth, HDMI, GPIO or whatever your audio device connects to.");
-            return;
+            return Ok(());
         }
     };
 
@@ -53,100 +55,115 @@ fn main() {
     ).convert_samples::<f32>(); // <-- Typ explizit auf f32 setzen
 
     sink.append(source);
-    sink.pause();
+    //sink.pause();
 
     let sink = std::sync::Arc::new(std::sync::Mutex::new(sink));
 
     let playback = std::sync::Arc::new(std::sync::Mutex::new(PlaybackState {
-        playing: false,
+        playing: true,
         paused: false,
         stopped: false,
-        start_time: None,
+        start_time: Some(Instant::now()),
         paused_offset: 0.0,
     }));
 
     // progress thread
     {
-        let sink = Arc::clone(&sink);
+        let _sink = Arc::clone(&sink);
         let playback = Arc::clone(&playback);
 
         thread::spawn(move || loop {
             {
-                let _s = sink.lock().unwrap();
                 let p = playback.lock().unwrap();
-
-                if p.stopped {
-                    print!("\r[------------------------------] 0.0s / {:.1}s", total_duration);
-                    std::io::Write::flush(&mut std::io::stdout()).unwrap();
-                }
-
-                if p.playing && !p.paused {
-                    let elapsed = p.start_time.unwrap().elapsed().as_secs_f32()
-                        + p.paused_offset;
-
-                    print_progress(elapsed, total_duration);
-                }
+        
+                let elapsed = if p.stopped {
+                    0.0
+                } else if p.paused {
+                    p.paused_offset
+                } else if p.playing {
+                    p.paused_offset + p.start_time.unwrap().elapsed().as_secs_f32()
+                } else {
+                    0.0
+                };
+        
+                let status = if p.stopped {
+                    "⏹ stop"
+                } else if p.paused {
+                    "⏸ pause"
+                } else if p.playing {
+                    "▶ play"
+                } else {
+                    ""
+                };
+        
+                print_progress(elapsed, total_duration, status);
             }
-
+        
             thread::sleep(Duration::from_millis(200));
         });
+        
+        
+        
     }
 
     // user controls
-    println!("controls: p = play | a = pause | s = stop | q = quit");
-    loop {
-        let mut input = String::new();
-        stdin().read_line(&mut input).unwrap();
+    println!("controls: SPACE = toggle play/pause | s = stop | q = quit");
 
-        match input.trim() {
-            "p" => {
-                let mut p = playback.lock().unwrap();
-                sink.lock().unwrap().play();
-
-                if !p.playing || p.stopped {
-                    // complete restart
-                    p.start_time = Some(Instant::now());
+loop {
+    if event::poll(Duration::from_millis(50))? {
+        if let Event::Key(key) = event::read()? {
+            match key.code {
+                KeyCode::Char('q') => {
+                    println!("x quitting...");
+                    break;
+                }
+                KeyCode::Char('s') => {
+                    let mut p = playback.lock().unwrap();
+                    sink.lock().unwrap().stop();
+                    p.playing = false;
+                    p.paused = false;
+                    p.stopped = true;
                     p.paused_offset = 0.0;
-                } else if p.paused {
-                    // resume
-                    p.start_time = Some(Instant::now());
+                    println!("⏹ stop");
+                }
+                KeyCode::Char('p') => {
+                    // optional: Play-Taste behalten
+                }
+                KeyCode::Char('a') => {
+                    // optional: Pause-Taste behalten
                 }
 
-                p.playing = true;
-                p.paused = false;
-                p.stopped = false;
-                println!("{}", file_path);
-                println!("▶ play");
-            }
-            "a" => {
-                let mut p = playback.lock().unwrap();
-                sink.lock().unwrap().pause();
-
-                if !p.paused {
-                    p.paused_offset += p.start_time.unwrap().elapsed().as_secs_f32();
+                // 🔥 HIER ist die gewünschte Leertaste ohne Enter
+                KeyCode::Char(' ') => {
+                    let mut p = playback.lock().unwrap();
+                    let s = sink.lock().unwrap();
+                
+                    if !p.playing || p.stopped {
+                        s.play();
+                        p.start_time = Some(Instant::now());
+                        p.paused_offset = 0.0;
+                        p.playing = true;
+                        p.paused = false;
+                        p.stopped = false;
+                    } else if p.paused {
+                        s.play();
+                        p.start_time = Some(Instant::now());
+                        p.paused = false;
+                    } else {
+                        s.pause();
+                        p.paused_offset += p.start_time.unwrap().elapsed().as_secs_f32();
+                        p.paused = true;
+                    }
                 }
+                
 
-                p.paused = true;
-                println!("⏸ pause");
+                _ => {}
             }
-            "s" => {
-                let mut p = playback.lock().unwrap();
-                sink.lock().unwrap().stop();
-
-                p.playing = false;
-                p.paused = false;
-                p.stopped = true;
-                p.paused_offset = 0.0;
-
-                println!("⏹ stop");
-            }
-            "q" => {
-                println!("x quitting...");
-                break;
-            }
-            _ => println!("unknown control"),
         }
     }
+}
+disable_raw_mode()?;
+Ok(())
 }
 
 fn format_time(sec: f32) -> String {
@@ -158,10 +175,9 @@ fn format_time(sec: f32) -> String {
 }
 
 /// progressbar
-fn print_progress(elapsed: f32, total: f32) {
+fn print_progress(elapsed: f32, total: f32, status: &str) {
     let width = 30;
     let ratio = (elapsed / total).clamp(0.0, 1.0);
-
     let filled = (ratio * width as f32) as usize;
     let empty = width - filled;
 
@@ -174,9 +190,12 @@ fn print_progress(elapsed: f32, total: f32) {
     let t_elapsed = format_time(elapsed);
     let t_total   = format_time(total);
 
-    print!("\r{} {} / {}", bar, t_elapsed, t_total);
+    print!("\r{} {} / {} {}", bar, t_elapsed, t_total, status);
+    print!("{}", " ".repeat(10)); // alte Zeichen überschreiben
     std::io::Write::flush(&mut std::io::stdout()).unwrap();
 }
+
+
 
 /// MP3 → PCM
 fn decode_mp3(path: &str) -> Result<(usize, usize, Vec<i16>), Box<dyn std::error::Error>> {
