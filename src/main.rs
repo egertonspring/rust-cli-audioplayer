@@ -101,15 +101,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         
             thread::sleep(Duration::from_millis(200));
         });
-        
-        
-        
     }
 
     // user controls
-    println!("controls: SPACE = toggle play/pause | s = stop | q = quit");
+    println!("controls: SPACE = toggle play/pause | s = stop and quit | q = quit");
 
 loop {
+    // Tastatureingaben wie bisher
     if event::poll(Duration::from_millis(50))? {
         if let Event::Key(key) = event::read()? {
             match key.code {
@@ -126,14 +124,6 @@ loop {
                     p.paused_offset = 0.0;
                     println!("⏹ stop");
                 }
-                KeyCode::Char('p') => {
-                    // optional: Play-Taste behalten
-                }
-                KeyCode::Char('a') => {
-                    // optional: Pause-Taste behalten
-                }
-
-                // 🔥 HIER ist die gewünschte Leertaste ohne Enter
                 KeyCode::Char(' ') => {
                     let mut p = playback.lock().unwrap();
                     let s = sink.lock().unwrap();
@@ -155,13 +145,22 @@ loop {
                         p.paused = true;
                     }
                 }
-                
 
                 _ => {}
             }
         }
     }
+
+    // check if song is finished
+    {
+        let s = sink.lock().unwrap();
+        if s.empty() {
+            println!("\nSong finished. Exiting...");
+            break;
+        }
+    }
 }
+
 disable_raw_mode()?;
 Ok(())
 }
