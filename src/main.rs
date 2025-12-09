@@ -24,7 +24,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("loading file: {}", file_path);
 
-    let (sample_rate, channels, samples) = decode_mp3(&file_path).expect("failed to decode");
+    let (sample_rate, channels, samples) = match decode_mp3(&file_path) {
+        Ok(decoded) => decoded,
+        Err(_) => {
+            eprintln!("Error: The file '{}' could not be found or decoded.", file_path);
+            return Ok(()); // gracefully exit after error
+        }
+    };
 
     let total_samples = samples.len() as f32;
     let total_duration =
@@ -104,7 +110,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // user controls
-    println!("controls: SPACE = toggle play/pause | s = stop and quit | q = quit");
+    println!("controls: SPACE = toggle play/pause | s = stop | q = quit");
 
 loop {
     // Tastatureingaben wie bisher
@@ -194,11 +200,13 @@ fn print_progress(elapsed: f32, total: f32, status: &str) {
     std::io::Write::flush(&mut std::io::stdout()).unwrap();
 }
 
-
-
 /// MP3 → PCM
 fn decode_mp3(path: &str) -> Result<(usize, usize, Vec<i16>), Box<dyn std::error::Error>> {
-    let file = File::open(path)?;
+    let file = File::open(path).map_err(|_| {
+        eprintln!("Error: Could not open file '{}'.", path);
+        Box::new(std::io::Error::new(std::io::ErrorKind::NotFound, "File not found")) as Box<dyn std::error::Error>
+    })?;
+
     let mut decoder = Mp3Decoder::new(file);
 
     let mut sample_rate = 44100;
@@ -221,5 +229,9 @@ fn decode_mp3(path: &str) -> Result<(usize, usize, Vec<i16>), Box<dyn std::error
         }
     }
 
-    Ok((sample_rate.try_into().unwrap(), channels, pcm))
+    if pcm.is_empty() {
+        Err(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Failed to decode the mp3 file.")))
+    } else {
+        Ok((sample_rate.try_into().unwrap(), channels, pcm))
+    }
 }
