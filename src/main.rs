@@ -1,7 +1,8 @@
 use crossterm::event::{self, Event, KeyCode};
 use crossterm::terminal::{enable_raw_mode, disable_raw_mode};
-use rodio::{OutputStream, Sink, Source};
+use id3::TagLike;
 use minimp3::{Decoder as Mp3Decoder, Frame};
+use rodio::{OutputStream, Sink, Source};
 use std::{
     fs::File,
     sync::{Arc},
@@ -23,6 +24,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .unwrap_or("Your-Song.mp3".to_string());
 
     println!("loading file: {}", file_path);
+    read_id3_tags(&file_path);
 
     let (sample_rate, channels, samples) = match decode_mp3(&file_path) {
         Ok(decoded) => decoded,
@@ -157,7 +159,7 @@ loop {
         }
     }
 
-    // check if song is finished
+    // 🔥 PRÜFUNG: Audio fertig?
     {
         let s = sink.lock().unwrap();
         if s.empty() {
@@ -233,5 +235,50 @@ fn decode_mp3(path: &str) -> Result<(usize, usize, Vec<i16>), Box<dyn std::error
         Err(Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "Failed to decode the mp3 file.")))
     } else {
         Ok((sample_rate.try_into().unwrap(), channels, pcm))
+    }
+}
+
+fn read_id3_tags(path: &str) {
+    if !path.to_lowercase().ends_with(".mp3") {
+        return; // Nur bei MP3 versuchen
+    }
+
+    match id3::Tag::read_from_path(path) {
+        Ok(tag) => {
+            println!("ID3 Tags found:");
+
+            if let Some(title) = tag.title() {
+                println!("  Title : {}", title);
+            }
+            if let Some(artist) = tag.artist() {
+                println!("  Artist: {}", artist);
+            }
+            if let Some(album) = tag.album() {
+                println!("  Album : {}", album);
+            }
+            if let Some(year) = tag.year() {
+                println!("  Year  : {}", year);
+            }
+
+            // Genre
+            if let Some(genre) = tag.genre() {
+                println!("  Genre : {}", genre);
+            }
+
+            // Track #
+            if let Some(track) = tag.track() {
+                println!("  Track : {}", track);
+            }
+
+            // Comments
+            for c in tag.comments() {
+                println!("  Comment: {}", c.text);
+            }
+
+            println!();
+        }
+        Err(_) => {
+            println!("No readable ID3 tags found.\n");
+        }
     }
 }
