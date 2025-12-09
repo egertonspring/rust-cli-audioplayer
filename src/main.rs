@@ -159,7 +159,7 @@ loop {
         }
     }
 
-    // 🔥 PRÜFUNG: Audio fertig?
+    // check if song is finished
     {
         let s = sink.lock().unwrap();
         if s.empty() {
