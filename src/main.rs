@@ -83,27 +83,23 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         thread::spawn(move || loop {
             {
                 let p = playback.lock().unwrap();
-        
-                let elapsed = if p.stopped {
-                    0.0
-                } else if p.paused {
+
+                let elapsed = if p.paused {
                     p.paused_offset
                 } else if p.playing {
                     p.paused_offset + p.start_time.unwrap().elapsed().as_secs_f32()
                 } else {
                     0.0
                 };
-        
-                let status = if p.stopped {
-                    "⏹ stop"
-                } else if p.paused {
+
+                let status = if p.paused {
                     "⏸ pause"
                 } else if p.playing {
                     "▶ play"
                 } else {
                     ""
                 };
-        
+
                 print_progress(elapsed, total_duration, status);
             }
         
@@ -112,7 +108,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // user controls
-    println!("controls: SPACE = toggle play/pause | s = stop | q = quit");
+    println!("controls: SPACE = toggle play/pause | q = quit");
 
 loop {
     // Tastatureingaben wie bisher
@@ -122,15 +118,6 @@ loop {
                 KeyCode::Char('q') => {
                     println!("x quitting...");
                     break;
-                }
-                KeyCode::Char('s') => {
-                    let mut p = playback.lock().unwrap();
-                    sink.lock().unwrap().stop();
-                    p.playing = false;
-                    p.paused = false;
-                    p.stopped = true;
-                    p.paused_offset = 0.0;
-                    println!("⏹ stop");
                 }
                 KeyCode::Char(' ') => {
                     let mut p = playback.lock().unwrap();
