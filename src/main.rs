@@ -59,7 +59,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let source = rodio::buffer::SamplesBuffer::new(
         channels as u16,
         sample_rate as u32,
-        samples,
+        samples.clone(),
     ).convert_samples::<f32>(); // <-- Typ explizit auf f32 setzen
 
     sink.append(source);
@@ -140,7 +140,82 @@ loop {
                         p.paused = true;
                     }
                 }
-
+                KeyCode::Right => {
+                    let mut p = playback.lock().unwrap();
+                    let mut s = sink.lock().unwrap();
+                
+                    // Berechne neue Position in Sekunden
+                    let current = if p.paused {
+                        p.paused_offset
+                    } else if p.playing {
+                        p.paused_offset + p.start_time.unwrap().elapsed().as_secs_f32()
+                    } else {
+                        0.0
+                    };
+                
+                    let new_pos = (current + 5.0).min(total_duration);
+                
+                    // Sink stoppen und neuen mit Offset starten
+                    s.stop();
+                    let new_sink = Sink::try_new(&handle).unwrap();
+                
+                    let start_sample = (new_pos * sample_rate as f32 * channels as f32) as usize;
+                    let source = rodio::buffer::SamplesBuffer::new(
+                        channels as u16,
+                        sample_rate as u32,
+                        samples[start_sample..].to_vec(),
+                    ).convert_samples::<f32>();
+                    new_sink.append(source);
+                    if !p.paused {
+                        new_sink.play();
+                    }
+                
+                    *s = new_sink;
+                
+                    // PlaybackState aktualisieren
+                    p.start_time = Some(Instant::now());
+                    p.paused_offset = new_pos;
+                    p.playing = true;
+                    p.paused = false;
+                }
+                KeyCode::Left => {
+                    let mut p = playback.lock().unwrap();
+                    let mut s = sink.lock().unwrap();
+                
+                    // Berechne neue Position in Sekunden
+                    let current = if p.paused {
+                        p.paused_offset
+                    } else if p.playing {
+                        p.paused_offset + p.start_time.unwrap().elapsed().as_secs_f32()
+                    } else {
+                        0.0
+                    };
+                
+                    let new_pos = (current - 5.0).max(0.0);
+                
+                    // Sink stoppen und neuen mit Offset starten
+                    s.stop();
+                    let new_sink = Sink::try_new(&handle).unwrap();
+                
+                    let start_sample = (new_pos * sample_rate as f32 * channels as f32) as usize;
+                    let source = rodio::buffer::SamplesBuffer::new(
+                        channels as u16,
+                        sample_rate as u32,
+                        samples[start_sample..].to_vec(),
+                    ).convert_samples::<f32>();
+                    new_sink.append(source);
+                    if !p.paused {
+                        new_sink.play();
+                    }
+                
+                    *s = new_sink;
+                
+                    // PlaybackState aktualisieren
+                    p.start_time = Some(Instant::now());
+                    p.paused_offset = new_pos;
+                    p.playing = true;
+                    p.paused = false;
+                }
                 _ => {}
             }
         }

@@ -21,7 +21,7 @@ sudo apt-get install libasound2-dev pkg-config
 
 ## controls
 ```
-SPACE = play/pause | q = quit
+SPACE = play/pause | q = quit | <- skip backwards 5 seconds | -> skip forward 5 seconds
 ```
 
 ## Installing Rust
