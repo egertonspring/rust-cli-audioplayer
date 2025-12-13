@@ -1,6 +1,6 @@
 # rust-cli-audioplayer
-is an audio-player that lives in the commandline. Especially written for and tested with MP3! (GenAI helped me!)
-
+is an audio-player that lives in the commandline. Especially written for and tested local MP3 files! (GenAI helped me!)
+The player now also supports HTTP URLs. It simply downloads the track and plays it locally. This is easier than streaming the track from HTTP. It also uses much less RAM.
 ## macOS
 It compiles and runs on macOS 26 immediately.
 
