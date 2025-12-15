@@ -1,15 +1,18 @@
 # rust-cli-audioplayer
-is an audio-player that lives in the commandline. Especially written for and tested local MP3 files! (GenAI helped me!)
+is an audio-player that lives in the commandline. Especially written for and tested with local MP3 files! (GenAI helped me!)
 The player now also supports HTTP URLs. It simply downloads the track and plays it locally. This is easier than streaming the track from HTTP. It also uses much less RAM.
 ## macOS
 It compiles and runs on macOS 26 immediately.
 
 
-## Raspberry Pi OS
+## Raspberry Pi OS (trixie)
 needs libasound2-dev libssl-dev and pkg-config installed
+Pulseaudio will help you to connect your bluetooth speakers correctly and play the music when no HDMI screen is connected but a little 3.5 inch touch screen.
+The reason is that RPiOS trixie changed from pulseaudio to pipewire.
 ```
 sudo apt-get update
-sudo apt-get install libasound2-dev pkg-config libssl-dev
+sudo apt-get install libasound2-dev pkg-config libssl-dev -y # to compile the player completely
+sudo apt-get install pulseaudio -y # to use bluetooth speakers when no HDMI screen is connected
 ```
 
 ## Ubuntu 25.10
