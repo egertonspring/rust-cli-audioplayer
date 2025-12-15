@@ -6,17 +6,17 @@ It compiles and runs on macOS 26 immediately.
 
 
 ## Raspberry Pi OS
-needs libasound2-dev
+needs libasound2-dev libssl-dev and pkg-config installed
 ```
 sudo apt-get update
-sudo apt-get install libasound2-dev pkg-config
+sudo apt-get install libasound2-dev pkg-config libssl-dev
 ```
 
 ## Ubuntu 25.10
-needs libasound2-dev
+needs libasound2-dev libssl-dev and pkg-config installed
 ```
 sudo apt-get update
-sudo apt-get install libasound2-dev pkg-config
+sudo apt-get install libasound2-dev pkg-config libssl-dev
 ```
 
 ## controls
