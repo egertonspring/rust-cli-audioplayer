@@ -42,5 +42,5 @@ cargo build --release
 ## Running
 ```
 cd rust-cli-audioplayer
-./target/release/cli-audioplayer-rs Your-Song.mp3
+./target/release/rust-cli-audioplayer-rs Your-Song.mp3
 ```
